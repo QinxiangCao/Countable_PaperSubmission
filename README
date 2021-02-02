@@ -12,7 +12,7 @@ and most proofs are in
     Relation/IndCountable_AuxDefs.v
     Relation/IndCountable.v
 
-This repo can be compiled under Coq 8.10.1. Command line "make depend" + "make"
-will complete the compilation.
+This repo can be compiled under Coq 8.10.1 and 8.11. Command line "make depend"
++ "make" will complete the compilation.
 
 Developers: Qinxiang Cao, Xiwei Wu.
