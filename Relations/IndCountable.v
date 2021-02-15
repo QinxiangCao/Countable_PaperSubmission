@@ -94,117 +94,11 @@ Section Pattern_match.
 
 Variables (T: Type).
 
-Definition Pattern_match_clause (arg : list (option Type)) (constr : constr_type arg T) 
-  (constrs : list (sigT (fun arg => constr_type arg T) )) : (normtype_clause arg T -> normtype T constrs T)
-  -> rect_clause_type arg T (fun _ => normtype T constrs T) constr :=
-  pattern_match_para_rec T constrs arg constr.
-
-Definition Pattern_match_rec (constrs0 constrs: ConstrsType T):
-    (normtype T constrs0 T -> normtype T constrs T) ->
-    (rect_type T constrs0 (fun _ => normtype T constrs T)) -> T -> normtype T constrs T :=
-  (fix Pattern_match_rec constrs0: (normtype T constrs0 T -> normtype T constrs T) ->
-    (rect_type T constrs0 (fun _ => normtype T constrs T)) -> T -> normtype T constrs T :=
-     match constrs0 as constrs1 return (normtype T constrs1 T -> normtype T constrs T) ->
-    (rect_type T constrs1 (fun _ => normtype T constrs T)) -> T -> normtype T constrs T with
-     | nil => fun F rect => rect
-     | existT _ arg constr2 :: constrs3 => 
-      fun F rect => Pattern_match_rec constrs3 (fun res => F (inr res)) (rect (Pattern_match_clause arg constr2 constrs (fun res => F (inl res ))))
-     end) constrs0 .
-
-Definition Pattern_match (constrs: ConstrsType T): 
-    (rect_type T constrs (fun _ => normtype T constrs T)) -> T -> normtype T constrs T :=
-   Pattern_match_rec constrs constrs (fun res => res).
-
-Theorem pattern_match_para_change : forall constrs rect a , 
-  Sol1.rect_correct T constrs rect ->
-  para_rect
-    T
-    (fun constrs _ => normtype T constrs T)
-    constrs
-    (fun constrs1 arg constr constrs3 =>
-       Pattern_match_clause
-         arg
-         constr
-         (rev_append constrs1 (_[ arg, constr ]_ :: constrs3))
-         (fun res =>
-            nested_inr T constrs1 (_[ arg, constr ]_ :: constrs3) T (inl res)))
-    (rect _)
-    a
-  =
-  para_rect
-    T
-    (fun constrs _ => normtype T constrs T)
-    constrs
-    (pattern_match_para T)
-    (rect _)
-    a.
-Proof.
-  intros.
-  unfold Sol1.rect_correct in H.
-  apply (para_rect_clause_rel_Prop T (fun constrs _ => normtype T constrs T) (fun constrs _ => normtype T constrs T) constrs (fun (constrs1 : ConstrsType T)
-       (arg : list (option Type)) (constr : constr_type arg T)
-       (constrs3 : ConstrsType T) =>
-     Pattern_match_clause arg constr
-       (rev_append constrs1 (_[ arg, constr ]_ :: constrs3))
-       (fun res : normtype_clause arg T =>
-        nested_inr T constrs1 (_[ arg, constr ]_ :: constrs3) T (inl res))) (pattern_match_para T) (rect _) (rect _) ) ; auto ; try (apply H).
-  clear. intros.
-  unfold para_rect_clause_rel.
-  unfold pattern_match_para.
-  set (F := (fun x : normtype_clause arg T =>
-      nested_inr T constrs1 (_[ arg, constr ]_ :: constrs3) T (inl x))).
-  clearbody F.
-  set (constrs0 := (rev_append constrs1 (_[arg, constr]_::constrs3))) in *.
-  clearbody constrs0.
-  induction arg as [ | [ | ]];simpl in * ; auto ; intros ; apply IHarg.
-Qed.
-
-Theorem PM_equiv_rec : forall constrs1 constrs23 rect a,
-  Pattern_match_rec
-    constrs23
-    (rev_append constrs1 constrs23)
-    (nested_inr T _ _ T)
-    rect
-    a
-  =
-  para_rect_rec
-    T
-    (fun constrs _ => normtype T constrs T)
-    constrs1
-    constrs23
-    (fun constrs1 arg constr constrs3 =>
-       Pattern_match_clause
-         arg
-         constr
-         (rev_append constrs1 (_[ arg, constr ]_ :: constrs3))
-         (fun res =>
-            nested_inr T constrs1 (_[ arg, constr ]_ :: constrs3) T (inl res)))
-    rect
-    a.
-Proof.
-  intros.
-  revert dependent constrs1.
-  induction constrs23 as [ | [arg constr] constrs3]; simpl in * ; intros ; auto.
-  apply IHconstrs3 with (constrs1 := _[ arg, constr ]_ :: constrs1) ; auto.
-Qed.
-
-Theorem PM_equiv : forall constrs rect a , Sol1.rect_correct T constrs rect ->
-  Pattern_match constrs (rect _) a = pattern_match T constrs (rect _) a.
-Proof.
-  intros. unfold pattern_match.
-  rewrite <- pattern_match_para_change ; auto.
-  apply PM_equiv_rec with (constrs1 := nil).
-Qed.
-
 (*Definition PM_inj := forall constrs rect a b,
   Pattern_match constrs rect a = Pattern_match constrs rect b -> a = b.
 *)
 Definition PM_inj_1 constrs rect a := forall b,
-  Pattern_match constrs rect a = Pattern_match constrs rect b -> a = b.
-
-Definition F_generator constrs1 constrs2  arg constr :
-  (normtype_clause arg T -> normtype T (rev_append constrs1 (_[ arg , constr]_ :: constrs2)) T) :=
-  (fun x => nested_inr T constrs1 ((existT (fun arg : list (option Type) => constr_type arg T) arg constr) :: constrs2) T (inl x)).
+  pattern_match T constrs rect a = pattern_match T constrs rect b -> a = b.
 
 Lemma nested_inr_eq : forall constrs1_r arg2 constr2 constrs4 x y,
   nested_inr T constrs1_r (_[ arg2, constr2]_ :: constrs4) T x =
@@ -250,7 +144,7 @@ Definition PM_inj_1_clause
     forall (constr : constr_type arg0 T)
            (F : normtype_clause arg0 T -> normtype T constrs T), Prop 
   with
-  | nil => fun constr F => forall a2:T , F tt = Pattern_match constrs Trect a2 -> constr = a2
+  | nil => fun constr F => forall a2:T , F tt = pattern_match T constrs Trect a2 -> constr = a2
   | Some T0 :: arg0 => fun constr F => forall x , PM_inj_1_clause arg0 (constr x) (fun nt => F (nt , x))
   | None :: arg0 => fun constr F => forall x , PM_inj_1_clause arg0 (constr x) (fun nt => F (nt , x))
   end.
@@ -274,10 +168,22 @@ Definition PM_inj_1_clause'
     forall (constr: constr_type arg0 T)
       (F: normtype_clause arg0 T -> normtype T constrs T), Prop
   with
-  | nil => fun constr F => F tt = Pattern_match constrs Trect a2 -> constr = a2
+  | nil => fun constr F => F tt = pattern_match T constrs Trect a2 -> constr = a2
   | cons (Some T0) arg0 => fun constr F => forall x, PM_inj_1_clause' arg0 (constr x) (fun nt => F (nt, x))
   | cons None arg0 => fun constr F => forall x, PM_inj_1_clause' arg0 (constr x) (fun nt => F (nt, x))
   end.
+
+Lemma PM_inj_1_clause_PM_inj_1_clause': forall constrs Trect arg constr F,
+  (forall a2, PM_inj_1_clause' a2  constrs Trect arg constr F) ->
+  PM_inj_1_clause constrs Trect arg constr F.
+Proof.
+  intros.
+  induction arg as [ | [ | ]] ; simpl in * ;  auto.
+Qed.
+
+(**
+  PM_inj_2_clause and PM_inj_2_clause_c describes the situation that x y: T fall into the same branch.
+*)
 
 Definition PM_inj_2_clause_nil 
            (constrs: list (sigT (fun arg => constr_type arg T) ))
@@ -368,56 +274,14 @@ Proof.
   induction arg1 as [ | [ | ]] ; simpl in * ; intros ; auto.
 Qed.
 
-Lemma PM_inj_1_clause_PM_inj_1_clause': forall constrs Trect arg constr F,
-  (forall a2, PM_inj_1_clause' a2  constrs Trect arg constr F) ->
-  PM_inj_1_clause constrs Trect arg constr F.
-Proof.
-  intros.
-  induction arg as [ | [ | ]] ; simpl in * ;  auto.
-Qed.
-
-Definition Pattern_match_correct
-           (constrs : ConstrsType T)
-           Trect:
-  forall (arg : list (option Type))
-         (constr : constr_type arg T)
-         (F : normtype_clause arg T -> normtype T constrs T), Prop :=
-  fix Pattern_match_correct (arg : list (option Type)) :
-    forall (constr : constr_type arg T)
-           (F : normtype_clause arg T -> normtype T constrs T), Prop :=
-  match arg as arg0 return 
-    forall (constr : constr_type arg0 T)
-           (F : normtype_clause arg0 T -> normtype T constrs T), Prop 
-  with
-  | nil => fun constr F => (*Pattern_match_clause nil constr constrs *)F tt  = Pattern_match constrs Trect constr
-  | Some T0 :: arg0 => fun constr F => forall x , Pattern_match_correct arg0 (constr x) (fun nt => F (nt , x))
-  | None :: arg0 => fun constr F => forall x , Pattern_match_correct arg0 (constr x) (fun nt => F (nt , x))
-  end.
-
-Theorem Pattern_match_correctness: forall constrs1 arg2 constr2 constrs3 rect,
-  Sol1.rect_correct T (rev_append constrs1 (_[ arg2 , constr2 ]_ :: constrs3)) rect ->
-  Pattern_match_correct (rev_append constrs1 (_[ arg2 , constr2 ]_ :: constrs3)) (rect _) arg2 constr2 (F_generator constrs1 constrs3 arg2 constr2).
-Proof.
-  intros.
-  pose proof (pattern_match_correctness _ _ _ _ _ _ H) as H0.
-  unfold pattern_match_correct in H0.
-  unfold pattern_match_para in H0.
-  unfold F_generator.
-  set (F x := nested_inr T constrs1 (_[ arg2, constr2 ]_ :: constrs3) T (inl x)) in *.
-  clearbody F.
-  set (constrs := (rev_append constrs1 (_[arg2,constr2]_::constrs3))) in *.
-  clearbody constrs.
-  induction arg2 as [ | [ | ]]; simpl in * ; intros ; auto.
-  rewrite PM_equiv ; auto.
-Qed.
-
 (** This lemma "PM_help" unfolds the PM function on the LHS of PM_inj_1 property. *)
 
 Theorem PM_help : forall constrs rect arg constr F , 
-  Pattern_match_correct constrs rect arg constr F ->
+  CG_pattern_match_correct T constrs arg constr rect F ->
   PM_inj_1_clause constrs rect arg constr F ->
   rect_clause_type arg T (fun a0 : T => PM_inj_1 constrs rect a0) constr.
 Proof.
+  unfold CG_pattern_match_correct.
   intros.
   unfold PM_inj_1.
   induction arg as [ | [ | ]] ; simpl in * ; intros.
@@ -425,6 +289,12 @@ Proof.
   - apply IHarg with (F := (fun res => F (res, x0))) ; auto.
   - apply IHarg with (F := (fun res => F (res, x))) ; auto.
 Qed.
+
+(** Then we prove the PM_inj_2_clause_c property, which is immediately followed by
+    PM_inj_2_clause.
+
+    BEGINNING OF THE PROOF.
+*)
 
 Lemma PM_inj_2_clause_correct_c1' : forall arg1 arg2 argc T0 constr1 constr2 F1 F2,
   PM_inj_2_clause_c argc arg1 constr1 F1 arg2 constr2 F2
@@ -493,29 +363,36 @@ Proof.
     + apply PM_inj_2_clause_correct_c2' ; auto.
 Qed.
 
+(** END OF THE PROOF. *)
+
+(* From PM_inj_2_clause to rect_clause_type PM_inj_1_clause' is just unfolding the RHS *)
+
 Lemma PM_inj_1_clause'_rect_clause : forall constrs arg constr F arg1 constr1 F1 rect,
-  Pattern_match_correct constrs rect arg1 constr1 F1 ->
+  CG_pattern_match_correct T constrs arg1 constr1 rect F1 ->
   PM_inj_2_clause constrs arg constr F arg1 constr1 F1 -> 
   rect_clause_type arg1 T (fun a0 : T => PM_inj_1_clause' a0 constrs rect arg constr F) constr1.
 Proof.
+  unfold CG_pattern_match_correct.
   intros.
   induction arg1 as [ | [ | ]] ; simpl in * ; intros ;  auto.
   - simpl in *. induction arg as [ | [ | ]] ; simpl in * ; intros ; auto.
-    apply H0. rewrite H1. apply H.
+    apply H0. rewrite H1. symmetry; apply H.
   - apply IHarg1 with (F1 := (fun res => F1 (res,x0))) ; auto.
   - apply IHarg1 with (F1 := (fun res => F1 (res,x))) ; auto. 
 Qed.
+
+(* when b appears on a righter branch *)
 
 Lemma PM_inj_1_clause'_correct_rec1 : forall a constrs1 constrs3a constrs3b arg constr rect rect1
   (G : normtype T (rev_append (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b) T -> 
        normtype T (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) T)
   (rect_correctness : Sol1.rect_correct T (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) rect)
   (rect_correctness1 : Sol1.rect_correct T (rev_append (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b) rect1)
-  (Prop_rect : forall x, Pattern_match (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) x = 
-    G (Pattern_match (rev_append (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b) (rect1 _) x))
-  (G_prop : forall x x1 , F_generator constrs1 (rev_append constrs3a constrs3b) arg constr x = G (nested_inr T (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b T x1) -> False)
-  (Trect : rect_type T constrs3b (fun a => PM_inj_1_clause' a (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) arg constr (F_generator constrs1 (rev_append constrs3a constrs3b) arg constr))),
-  PM_inj_1_clause' a (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) arg constr (F_generator constrs1 (rev_append constrs3a constrs3b) arg constr).
+  (Prop_rect : forall x, pattern_match T (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) x = 
+    G (pattern_match T (rev_append (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b) (rect1 _) x))
+  (G_prop : forall x x1, nested_inr_oo_inl T constrs1 arg constr (rev_append constrs3a constrs3b) x = G (nested_inr T (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3b T x1) -> False)
+  (Trect : rect_type T constrs3b (fun a => PM_inj_1_clause' a (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) arg constr (nested_inr_oo_inl T constrs1 arg constr (rev_append constrs3a constrs3b)))),
+  PM_inj_1_clause' a (rev_append (_[ arg, constr ]_ :: constrs1) (rev_append constrs3a constrs3b)) (rect _) arg constr (nested_inr_oo_inl T constrs1 arg constr (rev_append constrs3a constrs3b)).
 Proof.
   intros.
   revert dependent constrs3a.
@@ -523,16 +400,18 @@ Proof.
   apply (IHconstrs3 (_[ arg3, constr3 ]_ :: constrs3a) rect rect1 G);  auto ; try (intros ; apply (G_prop x (inr x1)) ; auto).
   apply Trect.
   clear IHconstrs3. clear Trect.
-  pose proof (Pattern_match_correctness _ _ _ _ _ rect_correctness).
-  pose proof (Pattern_match_correctness _ _ _ _ _ rect_correctness1).
+  pose proof (pattern_match_correctness _ _ _ _ _ _ rect_correctness).
+  pose proof (pattern_match_correctness _ _ _ _ _ _ rect_correctness1).
   clear rect_correctness rect_correctness1.
-  assert (forall x x1 , F_generator constrs1
-                        (rev_append constrs3a (_[ arg3, constr3 ]_ :: constrs3)) arg constr x = G (F_generator (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3 arg3 constr3 x1) -> False).
+  rewrite <- pattern_match_correct_equiv in H, H0.
+  unfold CG_pattern_match_correct in H, H0.
+  assert (forall x x1 , nested_inr_oo_inl T constrs1 arg constr
+                        (rev_append constrs3a (_[ arg3, constr3 ]_ :: constrs3)) x = G (nested_inr_oo_inl T (constrs3a ++ _[ arg, constr ]_ :: constrs1) arg3 constr3 constrs3 x1) -> False).
   { intros. apply (G_prop x (inl x1)). auto. }
-  set (F := F_generator constrs1
-                        (rev_append constrs3a (_[ arg3, constr3 ]_ :: constrs3)) arg constr) in *.
+  set (F := nested_inr_oo_inl T constrs1 arg constr
+                        (rev_append constrs3a (_[ arg3, constr3 ]_ :: constrs3))) in *.
   clearbody F.
-  set (F1 := F_generator (constrs3a ++ _[ arg, constr ]_ :: constrs1) constrs3 arg3 constr3) in *.
+  set (F1 := nested_inr_oo_inl T (constrs3a ++ _[ arg, constr ]_ :: constrs1) arg3 constr3 constrs3) in *.
   clearbody F1.
   clear G_prop.
   set (constrs := (rev_append constrs1
@@ -569,16 +448,18 @@ Definition is_id constrs1 constrs2 constrs3 arg constr
   + apply (IHconstrs2 (_[ arg1 , constr1]_ :: constrs1) G) .
 Defined. 
 
+(* case analysis for when b appears on a lefter branch, and use the conclusion about b appears on a righter branch above *)
+
 Theorem PM_inj_1_clause'_correct_rec : forall a constrs1 constrs2 constrs3 arg constr rect rect1
   (G : normtype T (rev_append constrs1 (constrs2 ++ _[arg,constr]_ :: constrs3)) T -> 
        normtype T (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) T)
   (rect_correctness : Sol1.rect_correct T (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) rect)
   (rect_correctness1 : Sol1.rect_correct T (rev_append constrs1 (constrs2 ++ _[arg,constr]_ :: constrs3)) rect1) 
-  (Prop_rect : forall x, Pattern_match (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) x = G (Pattern_match (rev_append constrs1 (constrs2 ++ _[arg,constr]_ :: constrs3)) (rect1 _) x))
+  (Prop_rect : forall x, pattern_match T (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) x = G (pattern_match T (rev_append constrs1 (constrs2 ++ _[arg,constr]_ :: constrs3)) (rect1 _) x))
   (G_prop1 : is_id constrs1 constrs2 constrs3 arg constr G)
   (G_prop2 : forall x y , G x = G y -> x = y)
-  (Trect_rev : rect_type_rev T constrs1 constrs2 (_[ arg, constr]_ :: constrs3) (fun a => PM_inj_1_clause' a (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) arg constr (F_generator (rev_append constrs2 constrs1) constrs3 arg constr))), 
-  PM_inj_1_clause' a (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) arg constr (F_generator (rev_append constrs2 constrs1) constrs3 arg constr).
+  (Trect_rev : rect_type_rev T constrs1 constrs2 (_[ arg, constr]_ :: constrs3) (fun a => PM_inj_1_clause' a (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) arg constr (nested_inr_oo_inl T (rev_append constrs2 constrs1) arg constr constrs3))), 
+  PM_inj_1_clause' a (rev_append (rev_append constrs2 constrs1) (_[ arg, constr]_ :: constrs3)) (rect _) arg constr (nested_inr_oo_inl T (rev_append constrs2 constrs1) arg constr constrs3).
 Proof.
   intros.
   revert a.
@@ -586,29 +467,29 @@ Proof.
   induction constrs1 as [| [arg1 constr1] constrs1] ; intros ; simpl in * ; auto.
   - apply (PM_inj_1_clause'_correct_rec1 a (rev_append constrs2 nil) nil constrs3 arg constr rect rect (fun res => res)) ; auto .
     * intros. simpl in *.
-      unfold F_generator in H. 
+      unfold nested_inr_oo_inl in H. 
       apply nested_inr_not_eq in H. auto.
     * apply Trect_rev. clear Trect_rev.
-      apply PM_inj_1_clause'_rect_clause with (F1 := F_generator (rev_append constrs2 nil) constrs3 arg constr).
-      + apply Pattern_match_correctness; auto.
+      apply PM_inj_1_clause'_rect_clause with (F1 := nested_inr_oo_inl T (rev_append constrs2 nil) arg constr constrs3).
+      + rewrite pattern_match_correct_equiv.
+        apply pattern_match_correctness; auto.
       + apply PM_inj_2_clause_correct2.
         intros.
-        unfold F_generator in H. apply nested_inr_eq in H . inversion H ; auto. 
+        unfold nested_inr_oo_inl in H. apply nested_inr_eq in H . inversion H ; auto. 
   - apply (IHconstrs1 (_[ arg1, constr1]_ :: constrs2) rect rect1 G);  auto. 
     apply Trect_rev.
     clear Trect_rev IHconstrs1.
-    pose proof (Pattern_match_correctness _ _ _ _ _ rect_correctness).
-    pose proof (Pattern_match_correctness _ _ _ _ _  rect_correctness1).
+    pose proof (pattern_match_correctness _ _ _ _ _ _ rect_correctness).
+    pose proof (pattern_match_correctness _ _ _ _ _ _ rect_correctness1).
     clear rect_correctness rect_correctness1.
-    assert (forall x x1, F_generator (rev_append constrs2 (_[ arg1, constr1 ]_ :: constrs1)) constrs3
-           arg constr x = G(F_generator constrs1 (constrs2 ++ _[ arg, constr]_ :: constrs3 ) arg1 constr1 x1) -> False).
+    assert (forall x x1, nested_inr_oo_inl T (rev_append constrs2 (_[ arg1, constr1 ]_ :: constrs1)) arg constr constrs3 x = G (nested_inr_oo_inl T constrs1 arg1 constr1 (constrs2 ++ _[ arg, constr]_ :: constrs3 ) x1) -> False).
     {  intros. 
-       unfold F_generator in H1.
+       unfold nested_inr_oo_inl in H1.
        clear - G_prop1 G_prop2 H1.
        assert (exists y , nested_inr T (rev_append constrs2 (_[ arg1, constr1 ]_ :: constrs1))
        (_[ arg, constr ]_ :: constrs3) T (inl x) = G
        (nested_inr T constrs1 (_[ arg1, constr1 ]_ :: constrs2 ++ _[ arg, constr ]_ :: constrs3)
-          T (inr y))). 
+          T (inr y))).
        { 
           clear H1 x1. revert dependent constrs1. revert dependent arg1.
           induction constrs2 as [ | [ arg2' constr2' ] constrs2'] ; simpl in * ; intros ; auto.
@@ -620,8 +501,9 @@ Proof.
        }
        destruct H. rewrite H in H1. apply G_prop2 in H1. apply nested_inr_eq in H1. inversion H1.
     }
-    set (F1 := F_generator constrs1 (constrs2 ++ _[ arg, constr]_ :: constrs3 ) arg1 constr1 ) in *.
-    set (F := F_generator (rev_append constrs2 (_[ arg1, constr1 ]_ :: constrs1)) constrs3 arg constr) in *.
+    rewrite <- pattern_match_correct_equiv in H, H0.
+    set (F1 := nested_inr_oo_inl T constrs1 arg1 constr1 (constrs2 ++ _[ arg, constr]_ :: constrs3 )) in *.
+    set (F := nested_inr_oo_inl T (rev_append constrs2 (_[ arg1, constr1 ]_ :: constrs1)) arg constr constrs3) in *.
     clearbody F F1.
     clear G_prop1 G_prop2.
     set (constrs := rev_append
@@ -632,6 +514,7 @@ Proof.
              (_[ arg1, constr1 ]_
               :: constrs2 ++ _[ arg, constr ]_ :: constrs3)) in *.
     clearbody constrs constrs'.
+    unfold CG_pattern_match_correct in *.
     clear constrs1 constrs3 constrs2.
     induction arg1 as [ | [ | ]] ; simpl in * ; intros ; auto.
     * induction arg as [ | [ | ]] ; simpl in * ; intros ; auto.
@@ -649,6 +532,8 @@ Proof.
       intros. apply H1 in H2 ; auto.
 Qed.
 
+(* Merging conclusions from all branches together. While filling arguments of Trect,
+   need to proof rect_clause_type PM_inj_1, proved by PM_inj_1_clause, which is proved above. *)
 Theorem PM_inj_correct_rec: forall a constrs1 constrs234 rect  
   (rect_correctness : Sol1.rect_correct T (rev_append constrs1 constrs234) rect)
   (Trect_axiom : forall P , rect_type T (rev_append constrs1 constrs234) P)
@@ -664,7 +549,8 @@ Proof.
     simpl in Trect. apply Trect.
     clear IHconstrs34 Trect.
     apply PM_help with (F := (fun res => nested_inr T constrs1 (_[ arg2, constr2 ]_ :: constrs34) T (inl res))).
-    + apply Pattern_match_correctness ; auto.
+    + rewrite pattern_match_correct_equiv.
+      apply pattern_match_correctness; auto.
     + apply PM_inj_1_clause_PM_inj_1_clause' ; intros ; auto.
       apply (PM_inj_1_clause'_correct_rec a2 constrs1 nil constrs34 arg2 constr2 rect rect (fun res => res)) ; auto.
       * hnf. auto. 
@@ -679,11 +565,13 @@ Proof.
   apply (PM_inj_correct_rec a nil constrs rect rect_correctness) ; auto.
 Qed.
 
-Program Definition injection_T (constrs : ConstrsType T) rect
+End Pattern_match.
+
+Program Definition injection_T T (constrs : ConstrsType T) rect
   (rect_correctness : Sol1.rect_correct T constrs rect) : 
                                     @SetoidMappings.injection T (normtype T constrs T) 
                                   (RealEq T) (normtype_equiv constrs T (RealEq T)) :=
-  SetoidMappings.Build_injection _ _ (fun a b => (normtype_equiv constrs T (RealEq T)) b (Pattern_match constrs (rect _) a)) _ _ _ _ .
+  SetoidMappings.Build_injection _ _ (fun a b => (normtype_equiv constrs T (RealEq T)) b (pattern_match T constrs (rect _) a)) _ _ _ _ .
 Next Obligation.
   hnf. intros. hnf. intros.
   rewrite H. 
@@ -695,7 +583,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   hnf. intros. 
-  exists (Pattern_match constrs (rect _) a).
+  exists (pattern_match T constrs (rect _) a).
   pose proof (normtype_equiv_Equ T constrs T (RealEq T) (RealEqEqu T)).
   apply H.
 Qed.
@@ -703,17 +591,15 @@ Next Obligation.
   hnf. intros.
   pose proof (normtype_equiv_Equ T constrs T (RealEq T) (RealEqEqu T)).
   destruct H1.  
-  apply Equivalence_Transitive with (Pattern_match constrs (rect _) a) ; auto.
+  apply Equivalence_Transitive with (pattern_match T constrs (rect _) a) ; auto.
 Qed.
 Next Obligation.
   hnf. intros. 
   apply normtype_equiv_IsRealEq in H ; try (apply RealEq_IsRealEq).
   apply normtype_equiv_IsRealEq in H0 ; try (apply RealEq_IsRealEq).
-  subst b. 
-  pose proof PM_inj_correct a1 constrs rect rect_correctness ; auto.
+  subst b.
+  pose proof PM_inj_correct T a1 constrs rect rect_correctness ; auto.
 Qed.
-
-End Pattern_match.
 
 Inductive Forall_type (A : Type) (P : A -> Type) : list A -> Type :=
   | Forall_type_nil : @Forall_type A P (@nil A)
@@ -875,8 +761,6 @@ Next Obligation.
   apply normtype_equiv_map_small in H0.
   rewrite <- H in H0. clear H.
   repeat rewrite <- DT_pattern_match_correct in H0.
-  rewrite <- PM_equiv in H0 ; try (apply rect_correctness_equiv ; auto).
-  rewrite <- PM_equiv in H0 ; try (apply rect_correctness_equiv ; auto).
   apply PM_inj_correct in H0 ; hnf ; auto.
   apply rect_correctness_equiv ; auto.
 Qed.
@@ -922,3 +806,5 @@ Proof.
 Qed.
 
 End countable.
+
+
