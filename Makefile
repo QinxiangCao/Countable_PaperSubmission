@@ -18,7 +18,7 @@ Classes_FILES = \
 
 Relations_FILES = \
   Mappings.v SetoidMappings.v Countable.v SetoidCountable.v RelationConstructors.v \
-  IndCountable.v IndCountable_AuxDefs.v CountableExamples.v
+  IndCountable.v IndCountable_AuxDefs.v CountableExamples.v CountableExamplesComparison.v
 
 #Fixpoint_FILES = \
 #  CPO.v

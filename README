@@ -1,4 +1,4 @@
-This git repo is for ITP21 submission, review and evaluation. These files are
+This git repo is for paper submission, review and evaluation. These files are
 part of a Coq formalization project, CommonKnowledge, which will be open source
 in the future.
 
@@ -12,7 +12,10 @@ and most proofs are in
     Relation/IndCountable_AuxDefs.v
     Relation/IndCountable.v
 
-This repo can be compiled under Coq 8.10.1 and 8.11. Command line "make depend"
-+ "make" will complete the compilation.
+A benchline proof based on old tactic-based proof scripts are in
+    Relations/CountableExamplesComparison.v
+
+This repo can be compiled under Coq 8.12. Command line "make depend" + "make"
+will complete the compilation.
 
 Developers: Qinxiang Cao, Xiwei Wu.
