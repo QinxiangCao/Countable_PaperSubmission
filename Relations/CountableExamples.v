@@ -22,7 +22,7 @@ Ltac Countable_solver :=
      match goal with 
       | |- Countable ?T =>  set (rect_T := ltac:(gen_rect T)) ;
                             set (constrs_T := ltac:(gen_constrs T rect_T)) ;
-                            assert (T_rect_correct : forall P para , Sol2.para_rect_correct T P para constrs_T (rect_T (P constrs_T))) by para_rect_correctness_gen;
+                            assert (T_rect_correct : forall P para , Sol2.apply_rect_correct T P para constrs_T (rect_T (P constrs_T))) by apply_rect_correctness_gen;
                             apply (Countable_T T constrs_T rect_T T_rect_correct); 
                             subst constrs_T; clear rect_T T_rect_correct; 
                             repeat constructor ; Countable_solver

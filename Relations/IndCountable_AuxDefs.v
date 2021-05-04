@@ -14,7 +14,7 @@ Definition rank_para T arg constr: rect_clause_type arg T (fun _ => nat) constr 
   rank_para_rec T arg O constr.
 
 Definition rank T constrs rect: T -> nat :=
-  para_rect T (fun _ _ => nat) constrs (fun constrs1 arg2 constr2 constrs3 => rank_para T arg2 constr2) rect.
+  apply_rect T (fun _ _ => nat) constrs (fun constrs1 arg2 constr2 constrs3 => rank_para T arg2 constr2) rect.
 
 Definition normtype_clause (arg: list (option Type)) (ty: Type): Type :=
   (fix normtype_clause arg: Type :=
@@ -82,7 +82,7 @@ Definition pattern_match_para
     (nested_inr_oo_inl T constrs1 arg2 constr2 constrs3).
 
 Definition pattern_match T constrs rect: T -> normtype T constrs T :=
-  para_rect T (fun constrs _ => normtype T constrs T) constrs (pattern_match_para T) rect.
+  apply_rect T (fun constrs _ => normtype T constrs T) constrs (pattern_match_para T) rect.
 
 Definition rank_correct T constrs rect arg constr: Prop :=
   rect_correct_clause T (fun _ => nat) (rank T constrs rect) arg constr (rank_para T arg constr).
@@ -95,8 +95,8 @@ Proof.
   intros.
   unfold Sol1.rect_correct in H0.
   specialize (H0 (fun _ _ => nat) (fun _ arg constr _ => rank_para T arg constr)).
-  unfold Sol1.para_rect_correct in H0.
-  change (para_rect T (fun _ _ => nat) constrs (fun _ arg constr _ => rank_para T arg constr) (rect (fun _ => nat))) with (rank T constrs (rect (fun _ => nat))) in H0.
+  unfold Sol1.apply_rect_correct in H0.
+  change (apply_rect T (fun _ _ => nat) constrs (fun _ arg constr _ => rank_para T arg constr) (rect (fun _ => nat))) with (rank T constrs (rect (fun _ => nat))) in H0.
   unfold rank_correct.
   set (RANK := rank T constrs (rect (fun _ : T => nat))) in H0 |- *.
   clearbody RANK.
@@ -302,7 +302,7 @@ Definition pattern_match_DT
     rank T constrs (rect (fun _ => nat)) t < S n ->
     normtype T constrs (sig (fun t: T => rank T constrs (rect (fun _ => nat)) t < n)).
   refine (fun t =>
-  para_rect_rec
+  apply_rect_rec
     T
     (fun constrs t =>
        forall x: rect_type T constrs (fun _ => nat),
@@ -326,7 +326,7 @@ Definition pattern_match_DT_correct n T constrs1 arg constr constrs3 rect: Prop 
    rank T (rev_append constrs1 (_[ arg, constr ]_ :: constrs3)) x t0 < S n ->
    normtype T (rev_append constrs1 (_[ arg, constr ]_ :: constrs3))
      {t1 : T | rank T (rev_append constrs1 (_[ arg, constr ]_ :: constrs3)) x t1 < n})
-  (para_rect_rec T
+  (apply_rect_rec T
      (fun (constrs0 : list {arg0 : list (option Type) & constr_type arg0 T})
         (t0 : T) =>
       forall x : rect_type T constrs0 (fun _ : T => nat),
@@ -344,7 +344,7 @@ Lemma pattern_match_DT_correctness : forall n T constrs1 arg2 constr2 constrs3 r
   pattern_match_DT_correct n T constrs1 arg2 constr2 constrs3 (rect _).
 Proof.
   intros. unfold Sol1.rect_correct in H.
-  unfold Sol1.para_rect_correct in H.
+  unfold Sol1.apply_rect_correct in H.
   assert(forall (P : ConstrsType T -> T -> Type)
       (para: ParaType T P),
     citer_and T
@@ -357,7 +357,7 @@ Proof.
        rect_correct_clause T (P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3))) f arg2
          constr2 (para constrs1 arg2 constr2 constrs3)) constrs1
        (_[ arg2, constr2 ]_ :: constrs3)
-      (para_rect T P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3)) para
+      (apply_rect T P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3)) para
          (rect (P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3))))) ).
   { 
     revert arg2 constr2 constrs3 rect H.
@@ -509,7 +509,7 @@ Qed.
 
 Lemma DT_pattern_match_para_equiv_clause_lemma : forall T constrs1 arga argb constr constrb constrs3 n
   F1 X, Match_result T constrs1 arga argb constr constrb constrs3 n F1 X ->
-  para_rect_clause_rel_rec T
+  apply_rect_clause_rel_rec T
   (fun (constrs0 : ConstrsType T) (_ : T) =>
    normtype T constrs0 T)
   (fun (constrs0 : ConstrsType T) (t0 : T) =>
@@ -551,7 +551,7 @@ Lemma DT_pattern_match_para_equiv_clause : forall T constrs1 arga argb constr co
   (forall x x0 x1 h, x0 = normtype_clause_map argb {t1 : T | rank T (rev_append constrs1 (_[ rev_append arga argb , constr ]_ :: constrs3)) x t1 < n} T (proj1_sig (P:=fun t1 : T => rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t1 < n)) x1 -> F1 x0 = normtype_clause_map (rev_append arga argb) {t1 : T | rank T (rev_append constrs1 (_[ rev_append arga argb , constr ]_ :: constrs3)) x t1 < n} T (proj1_sig (P:=fun t1 : T => rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t1 < n)) (F2 x x1 h))-> 
     (forall x x0 x1 h,  F1 x0 = normtype_clause_map (rev_append arga argb) {t1 : T | rank T (rev_append constrs1 (_[ rev_append arga argb , constr ]_ :: constrs3)) x t1 < n} T (proj1_sig (P:=fun t1 : T => rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t1 < n)) (F2 x x1 h) ->
   nested_inr T constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3) T (inl (F1 x0)) = normtype_map T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) {t1 : T | rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t1 < n} T (proj1_sig (P:=fun t1 : T => rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t1 < n)) (nested_inr T constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3) {t : T | rank T (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3)) x t < n} (inl (F2 x x1 h)))) ->
-  para_rect_clause_rel_rec T
+  apply_rect_clause_rel_rec T
   (fun (constrs0 : ConstrsType T) (_ : T) => normtype T constrs0 T)
   (fun (constrs0 : ConstrsType T) (t0 : T) =>
    forall x : rect_type T constrs0 (fun _ : T => nat),
@@ -641,7 +641,7 @@ Proof.
 Qed.
 
 Lemma DT_pattern_match_para_equiv : forall T constrs1 arg constr constrs3 n , 
-  para_rect_clause_rel T
+  apply_rect_clause_rel T
   (fun constrs0 _ => normtype T constrs0 T)
   (fun constrs0 t0 => forall x : rect_type T constrs0 (fun _ : T => nat),
    (forall arg0 constr0 , In (_[ arg0, constr0 ]_) constrs0 -> rank_correct T constrs0 x arg0 constr0) ->
@@ -685,7 +685,7 @@ Theorem DT_pattern_match_correct: forall T constrs (rect: forall P, rect_type T 
   pattern_match T constrs (rect _) t = normtype_map T constrs _ _ (@proj1_sig _ _) (pattern_match_DT n T constrs rect rect_correctness t H).
 Proof.
   intros.
-  refine (para_rect_clause_rel_Prop T (fun constrs _ => normtype T constrs T) (fun constrs0 t0 =>
+  refine (apply_rect_clause_rel_Prop T (fun constrs _ => normtype T constrs T) (fun constrs0 t0 =>
       forall x : rect_type T constrs0 (fun _ : T => nat),
       (forall arg constr,  In (_[ arg, constr ]_) constrs0 -> rank_correct T constrs0 x arg constr) ->
       rank T constrs0 x t0 < S n ->

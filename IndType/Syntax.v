@@ -206,12 +206,12 @@ End Test03.
 (*                                                                   *)
 (* Part B.                                                           *)
 (*   Def "rect_type" t constrs P: the type of (t_rect P).            *)
-(*   Def "para_rect_type": a parameterized way of filling t_rect's   *)
+(*   Def "apply_rect_type": a parameterized way of filling t_rect's  *)
 (*     arguments.                                                    *)
 (*   Def "Sol1.rect_correct / Sol2.rect_correct": any parameterized  *)
 (*     way of filling t_rect's argument will result in the expected  *)
 (*     value calculated by the branch.                               *)
-(*   Tac "para_rect_correctness_gen": Prove Sol2.rect_correct.       *)
+(*   Tac "apply_rect_correctness_gen": Prove Sol2.rect_correct.      *)
 (*                                                                   *)
 (*********************************************************************)
 
@@ -246,7 +246,7 @@ Definition ParaType (T: Type) (P: ConstrsType T -> T -> Type): Type :=
        (P (rev_append constrs1 (_[arg2, constr2]_ :: constrs3)))
        constr2.
 
-Fixpoint para_rect_rec
+Fixpoint apply_rect_rec
          (T: Type)
          (P: ConstrsType T -> T -> Type)
          (constrs1 constrs23: ConstrsType T):
@@ -259,16 +259,16 @@ Fixpoint para_rect_rec
       fun para rect => rect
   | existT _ arg2 constr2 :: constrs3 =>
       fun para rect =>
-        para_rect_rec T P (_[arg2, constr2]_ :: constrs1) constrs3 para
+        apply_rect_rec T P (_[arg2, constr2]_ :: constrs1) constrs3 para
           (rect (para constrs1 arg2 constr2 constrs3))
   end.
 
-Definition para_rect (T: Type)
+Definition apply_rect (T: Type)
            (P: ConstrsType T -> T -> Type)
            (constrs: ConstrsType T):
   ParaType T P -> rect_type T constrs (P constrs) -> forall t: T, (P constrs) t
 :=
-  para_rect_rec T P nil constrs.
+  apply_rect_rec T P nil constrs.
 
 Fixpoint rect_correct_clause (T: Type) (P: T -> Type) (f: forall t: T, P t) (arg: list (option Type)):
   forall (constr: constr_type arg T), rect_clause_type arg T P constr -> Prop :=
@@ -299,7 +299,7 @@ Fixpoint citer_and
 
 Module Sol1.
 
-Definition para_rect_correct
+Definition apply_rect_correct
            (T: Type)
            (P: ConstrsType T -> T -> Type)
            (para: ParaType T P)
@@ -318,16 +318,16 @@ Definition para_rect_correct
                  (para constrs1 arg2 constr2 constrs3))
             nil
             constrs
-            (para_rect T P constrs para rect).
+            (apply_rect T P constrs para rect).
 
 Definition rect_correct T constrs (rect: forall P, rect_type T constrs P): Prop :=
-  forall P para, para_rect_correct T P para constrs (rect (P constrs)).
+  forall P para, apply_rect_correct T P para constrs (rect (P constrs)).
 
 End Sol1.
 
 Module Sol2.
 
-Definition para_rect_correct
+Definition apply_rect_correct
            (T: Type)
            (P: ConstrsType T -> T -> Type)
            (para: ParaType T P)
@@ -340,23 +340,23 @@ Definition para_rect_correct
        rect_correct_clause
          T
          (P (rev_append constrs1 (_[arg2, constr2]_ :: constrs3)))
-         (para_rect
+         (apply_rect
             T P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3))
             para x)
          arg2 constr2 (para constrs1 arg2 constr2 constrs3)) nil
     constrs rect.
 
 Definition rect_correct T constrs (rect: forall P, rect_type T constrs P): Prop :=
-  forall P para, para_rect_correct T P para constrs (rect (P constrs)).
+  forall P para, apply_rect_correct T P para constrs (rect (P constrs)).
 
 End Sol2.
 
-Lemma para_rect_correct_equiv: forall T P para constrs rect,
-  Sol1.para_rect_correct T P para constrs rect <->
-  Sol2.para_rect_correct T P para constrs rect.
+Lemma apply_rect_correct_equiv: forall T P para constrs rect,
+  Sol1.apply_rect_correct T P para constrs rect <->
+  Sol2.apply_rect_correct T P para constrs rect.
 Proof.
   intros.
-  unfold Sol1.para_rect_correct, Sol2.para_rect_correct, para_rect.
+  unfold Sol1.apply_rect_correct, Sol2.apply_rect_correct, apply_rect.
   change constrs with (rev_append nil constrs) in rect.
   change constrs with (rev_append nil constrs) at 2.
   set (constrs1 := @nil (sigT (fun arg => constr_type arg T))) in rect.
@@ -375,17 +375,17 @@ Lemma rect_correctness_equiv : forall T constrs (rect : forall P, rect_type T co
 Proof.
   intros.
   unfold Sol1.rect_correct , Sol2.rect_correct.
-  split ; intros ; apply para_rect_correct_equiv ; auto.
+  split ; intros ; apply apply_rect_correct_equiv ; auto.
 Qed. 
 
 Import Sol2.
 
-Ltac para_rect_correctness_gen :=
+Ltac apply_rect_correctness_gen :=
   try unfold rect_correct;
   match goal with
-  | |- forall P para, para_rect_correct _ P para ?constrs (_ (P _)) =>
+  | |- forall P para, apply_rect_correct _ P para ?constrs (_ (P _)) =>
          intros;
-         unfold para_rect_correct, rect_correct_clause, constrs, para_rect, para_rect_rec, citer_and;
+         unfold apply_rect_correct, rect_correct_clause, constrs, apply_rect, apply_rect_rec, citer_and;
          repeat split
   end.
 
@@ -394,15 +394,15 @@ Import Test03.
 Import Test02.
 
 Theorem Nat_rect_correctness:
-  forall P para, para_rect_correct Nat P para constrs_Nat (Nat_rect (P constrs_Nat)).
+  forall P para, apply_rect_correct Nat P para constrs_Nat (Nat_rect (P constrs_Nat)).
 Proof.
-  para_rect_correctness_gen.
+  apply_rect_correctness_gen.
 Qed.
 
 Theorem Tree_rect_correctness:
-  forall P para, para_rect_correct Tree P para constrs_Tree (rect_Tree (P constrs_Tree)).
+  forall P para, apply_rect_correct Tree P para constrs_Tree (rect_Tree (P constrs_Tree)).
 Proof.
-  para_rect_correctness_gen.
+  apply_rect_correctness_gen.
 Qed.
 
 End Test04.
@@ -410,16 +410,17 @@ End Test04.
 (*********************************************************************)
 (*                                                                   *)
 (* Part C.                                                           *)
-(*   Def "para_rect_clause_rel _ _ _ _ _ _ _ R": the relation between*)
-(*     two rect_clauses X X0---no matter what arguments are filled,  *)
-(*     the computation results of (X ...) and (X0 ...) has relation R*)
-(*   Thm "para_rect_clause_rel_Prop": for any para1 and para2,       *)
-(*     if they satisfy [para_rect_clause_rel R] for every branch,    *)
-(*     the their para_rect satisfy [R].                              *)
+(*   Def "apply_rect_clause_rel _ _ _ _ _ _ _ R": the relation       *)
+(*     between two rect_clauses X X0---no matter what arguments are  *)
+(*     filled, the computation results of (X ...) and (X0 ...) has   *)
+(*     relation [R].                                                 *)
+(*   Thm "apply_rect_clause_rel_Prop": for any para1 and para2,      *)
+(*     if they satisfy [apply_rect_clause_rel R] for every branch,   *)
+(*     the their apply_rect satisfy [R].                             *)
 (*                                                                   *)
 (*********************************************************************)
 
-Fixpoint para_rect_clause_rel_rec
+Fixpoint apply_rect_clause_rel_rec
              T
              (P1 P2 : ConstrsType T -> T -> Type)
              constrs
@@ -434,15 +435,15 @@ Fixpoint para_rect_clause_rel_rec
   | nil => fun constr R => R constrs constr
   | Some T0 :: arg0 => fun constr R X X0 =>
       forall x0: T0,
-        para_rect_clause_rel_rec T P1 P2 constrs arg0
+        apply_rect_clause_rel_rec T P1 P2 constrs arg0
           (constr x0) R (X x0) (X0 x0)
   | None :: arg0 => fun constr R X X0 =>
       forall x y1 y2,
-        para_rect_clause_rel_rec T P1 P2 constrs arg0
+        apply_rect_clause_rel_rec T P1 P2 constrs arg0
           (constr x) R (X x y1) (X0 x y2)
   end.
 
-Definition para_rect_clause_rel
+Definition apply_rect_clause_rel
              T
              (P1 P2 : ConstrsType T -> T -> Type) 
              constrs1 arg2 constr2 constrs3
@@ -453,13 +454,13 @@ Definition para_rect_clause_rel
     arg2 T (P2 (rev_append constrs1 (_[arg2,constr2]_ :: constrs3))) constr2 ->
   Prop
 :=
-  para_rect_clause_rel_rec T P1 P2
+  apply_rect_clause_rel_rec T P1 P2
     (rev_append constrs1 (_[arg2,constr2]_::constrs3)) arg2 constr2 R.
 
-Lemma para_rect_clause_rel_Prop_clause_ind:
+Lemma apply_rect_clause_rel_Prop_clause_ind:
   forall T P1 P2 constrs1 arga argb constr constrb constrs3 para1 para2
          R clause1 clause2,
-    para_rect_clause_rel_rec
+    apply_rect_clause_rel_rec
       T P1 P2
       (rev_append constrs1 (_[ rev_append arga argb, constr ]_ :: constrs3))
       argb constrb R clause1 clause2 ->
@@ -476,7 +477,7 @@ Lemma para_rect_clause_rel_Prop_clause_ind:
       (P1 (rev_append
              constrs1
              (_[ rev_append arga argb, constr ]_ :: constrs3)))
-      (para_rect_rec
+      (apply_rect_rec
          T P1
          (_[ rev_append arga argb, constr ]_ :: constrs1)
          constrs3 para1 rect_clause1)
@@ -494,7 +495,7 @@ Lemma para_rect_clause_rel_Prop_clause_ind:
       (P2 (rev_append
              constrs1
              (_[ rev_append arga argb, constr ]_ :: constrs3)))
-      (para_rect_rec
+      (apply_rect_rec
          T P2
          (_[ rev_append arga argb, constr ]_ :: constrs1)
          constrs3 para2 rect_clause2)
@@ -507,11 +508,11 @@ Lemma para_rect_clause_rel_Prop_clause_ind:
               constrs1
               (_[ rev_append arga argb, constr ]_ :: constrs3))
            t0
-           (para_rect_rec
+           (apply_rect_rec
               T P1
               (_[ rev_append arga argb, constr ]_ :: constrs1)
               constrs3 para1 rect_clause1 t0)
-           (para_rect_rec
+           (apply_rect_rec
               T P2
               (_[ rev_append arga argb, constr ]_ :: constrs1)
               constrs3 para2 rect_clause2 t0))
@@ -534,60 +535,60 @@ Proof.
              (constrb x) (None :: arga) constr
              (clause1
                 x
-                (para_rect_rec
+                (apply_rect_rec
                    T P1
                    (_[ rev_append arga (None :: argb), constr ]_ :: constrs1)
                    constrs3 para1 rect_clause1 x))
              (clause2
                 x
-                (para_rect_rec
+                (apply_rect_rec
                    T P2
                    (_[ rev_append arga (None :: argb), constr ]_ :: constrs1)
                    constrs3 para2 rect_clause2 x)));
     auto.
 Qed.
 
-Lemma para_rect_clause_rel_Prop_clause:
+Lemma apply_rect_clause_rel_Prop_clause:
   forall T P1 P2 constrs1 arg constr constrs3 para1 para2 rect1 rect2 R,
-    para_rect_clause_rel
+    apply_rect_clause_rel
       T P1 P2 constrs1 arg constr constrs3 R
       (para1 constrs1 arg constr constrs3)
       (para2 constrs1 arg constr constrs3) -> 
     rect_correct_clause
       T
       (P1 (rev_append constrs1 (_[arg,constr]_::constrs3)))
-      (para_rect_rec T P1 constrs1 (_[arg,constr]_::constrs3) para1 rect1)
+      (apply_rect_rec T P1 constrs1 (_[arg,constr]_::constrs3) para1 rect1)
       arg constr
       (para1 constrs1 arg constr constrs3) ->
     rect_correct_clause
       T
       (P2 (rev_append constrs1 (_[arg,constr]_::constrs3)))
-      (para_rect_rec T P2 constrs1 (_[arg,constr]_::constrs3) para2 rect2)
+      (apply_rect_rec T P2 constrs1 (_[arg,constr]_::constrs3) para2 rect2)
       arg constr
       (para2 constrs1 arg constr constrs3) ->
   rect_clause_type arg T
   (fun t0 : T =>
    R (rev_append constrs1 (_[ arg, constr ]_ :: constrs3)) t0
-     (para_rect_rec T P1 (_[ arg, constr ]_ :: constrs1) constrs3 para1
+     (apply_rect_rec T P1 (_[ arg, constr ]_ :: constrs1) constrs3 para1
         (rect1 (para1 constrs1 arg constr constrs3)) t0)
-     (para_rect_rec T P2 (_[ arg, constr ]_ :: constrs1) constrs3 para2
+     (apply_rect_rec T P2 (_[ arg, constr ]_ :: constrs1) constrs3 para2
         (rect2 (para2 constrs1 arg constr constrs3)) t0)) constr.
 Proof.
   intros. simpl in *.
-  apply (para_rect_clause_rel_Prop_clause_ind
+  apply (apply_rect_clause_rel_Prop_clause_ind
            T P1 P2 constrs1 nil arg constr constr constrs3 para1 para2 R
            (para1 constrs1 arg constr constrs3)
            (para2 constrs1 arg constr constrs3)); auto.
 Qed.
 
-Theorem para_rect_clause_rel_Prop:
+Theorem apply_rect_clause_rel_Prop:
   forall T P1 P2 constrs
          (para1: ParaType T P1) (para2: ParaType T P2)
          (rect: forall P, rect_type T constrs P)
          (rect_correctness: Sol1.rect_correct T constrs rect)
          R,
     (forall constrs1 arg constr constrs3,
-       para_rect_clause_rel
+       apply_rect_clause_rel
          T P1 P2 constrs1 arg constr constrs3 R
          (para1 constrs1 arg constr constrs3)
          (para2 constrs1 arg constr constrs3)) ->
@@ -595,12 +596,12 @@ Theorem para_rect_clause_rel_Prop:
       T constrs
       (fun t =>
          R constrs t
-           (para_rect T P1 constrs para1 (rect _) t)
-           (para_rect T P2 constrs para2 (rect _) t)) ->
+           (apply_rect T P1 constrs para1 (rect _) t)
+           (apply_rect T P2 constrs para2 (rect _) t)) ->
     forall t,
       R constrs t
-        (para_rect T P1 constrs para1 (rect _) t)
-        (para_rect T P2 constrs para2 (rect _) t).
+        (apply_rect T P1 constrs para1 (rect _) t)
+        (apply_rect T P2 constrs para2 (rect _) t).
 Proof.
   intros.
   pose proof rect_correctness _ para1 as H0.
@@ -610,7 +611,7 @@ Proof.
   set (rect1 := rect (P1 constrs)) in *.
   set (rect2 := rect (P2 constrs)) in *.
   clearbody rect1 rect2; clear rect.
-  unfold para_rect in *.
+  unfold apply_rect in *.
   change constrs with (rev_append nil constrs) in rect1 at 2, rect2 at 2, X at 2.
   change constrs with (rev_append nil constrs) at 1.
   set (constrs1 := nil) in *;
@@ -621,7 +622,7 @@ Proof.
   apply IHconstrs3 with (constrs1 := _[arg,constr]_ :: constrs1); try (tauto).
   apply X.
   clear X IHconstrs3.
-  apply para_rect_clause_rel_Prop_clause ; auto ; tauto.
+  apply apply_rect_clause_rel_Prop_clause ; auto ; tauto.
 Qed.
 
 (*********************************************************************)
@@ -643,12 +644,12 @@ Lemma Sol1_rect_correct_lemma : forall T constrs1 arg2 constr2 constrs3 rect ,
        rect_correct_clause T (P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3))) f arg2
          constr2 (para constrs1 arg2 constr2 constrs3)) constrs1
        (_[ arg2, constr2 ]_ :: constrs3)
-      (para_rect T P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3)) para
+      (apply_rect T P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3)) para
          (rect (P (rev_append constrs1 (_[ arg2, constr2 ]_ :: constrs3))))) ).
 Proof.
   intros.
   unfold Sol1.rect_correct in H.
-  unfold Sol1.para_rect_correct in H.
+  unfold Sol1.apply_rect_correct in H.
   revert arg2 constr2 constrs3 rect H.
   induction constrs1 as [ | [arg1 constr1] constrs1]; simpl in * ; intros ; auto.
   apply (IHconstrs1 arg1 constr1 (_[arg2 , constr2]_ :: constrs3)) ; auto.
